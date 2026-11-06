@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1d4ed8">
+<title>Mi Asistente de Combustible</title>
+<style>
+:root{color-scheme:light;--blue:#1d4ed8;--navy:#172554;--green:#15803d;--amber:#b45309;--red:#b91c1c;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--bg:#f1f5f9}
+*{box-sizing:border-box}body{margin:0;padding:22px;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:auto}header{text-align:center;margin:8px 0 24px}h1{margin:0;color:var(--navy);font-size:clamp(1.6rem,4vw,2.2rem)}header p{color:var(--muted);margin:8px 0}
+h2{font-size:1.15rem;margin:0 0 16px;color:var(--navy)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 18px #0f172a0a;margin-bottom:18px}
+.field{margin-bottom:13px}label{display:block;font-size:.9rem;font-weight:650;margin-bottom:5px}input,select{width:100%;min-height:42px;border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;font:inherit;background:white;color:var(--ink)}input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+button,.button{border:0;border-radius:9px;background:var(--blue);color:white;padding:10px 14px;font:600 .95rem system-ui;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button:hover,.button:hover{filter:brightness(.95)}button:disabled{opacity:.55;cursor:wait}.secondary{background:#475569}.gold{background:var(--amber)}.danger{background:#991b1b}.small{padding:7px 10px;font-size:.83rem}.wide{width:100%}.muted,.hint{color:var(--muted);font-size:.88rem}.hint{margin:5px 0 0}.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:end}.toolbar .field{flex:1;min-width:145px;margin:0}.status{padding:11px 13px;border-radius:9px;margin:12px 0;font-size:.9rem;background:#eff6ff;color:#1e40af}.status.error{background:#fef2f2;color:#991b1b}.status.success{background:#f0fdf4;color:#166534}.hidden{display:none!important}
+.results{margin-top:15px;display:grid;gap:11px}.station{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.station.best{border:2px solid var(--green);background:#f0fdf4}.station-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.station-name{font-weight:750}.station-address{font-size:.88rem;color:var(--muted);margin-top:3px}.tag{display:inline-block;border-radius:5px;background:#dcfce7;color:#166534;padding:3px 7px;font-size:.75rem;font-weight:700;white-space:nowrap}.prices{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.price{background:#eff6ff;padding:7px 9px;border-radius:8px;font-size:.9rem}.price.diesel{background:#fef3c7}.price b{font-variant-numeric:tabular-nums}.details{font-size:.84rem;color:var(--muted);margin:6px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.empty{text-align:center;color:var(--muted);padding:18px 8px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.stat{background:#f8fafc;border:1px solid var(--line);padding:11px;border-radius:10px}.stat strong{display:block;font-size:1.15rem;color:var(--navy)}.stat span{font-size:.78rem;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:.82rem;padding:5px 0 20px}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.section-head h2{margin:0}
+@media(max-width:720px){body{padding:13px}.grid{grid-template-columns:1fr}.card{padding:16px}.stats{grid-template-columns:1fr 1fr}.station-top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>⛽ Mi Asistente de Combustible</h1>
+<p>Consulta precios, compara estaciones y calcula el coste de repostar.</p>
+</header>
+
+<div class="grid">
+<section class="card">
+<h2>🚗 Datos de mi vehículo</h2>
+<div class="field"><label for="tank">Capacidad del depósito (litros)</label><input id="tank" type="number" min="1" max="300" step="0.1" value="50"></div>
+<div class="field"><label for="consumption">Consumo medio (l/100 km)</label><input id="consumption" type="number" min="0.1" max="100" step="0.1" value="6"></div>
+<div class="field"><label for="fuel">Combustible para los cálculos</label><select id="fuel"><option value="95">Gasolina 95 E5</option><option value="diesel">Gasóleo A</option></select></div>
+<p class="hint">Estos datos se guardan automáticamente en este navegador.</p>
+<div class="stats">
+ <div class="stat"><strong id="tank-cost">—</strong><span>Depósito lleno en la más barata</span></div>
+ <div class="stat"><strong id="range">—</strong><span>Autonomía estimada</span></div>
+ <div class="stat"><strong id="litres">—</strong><span>Litros del depósito</span></div>
+</div>
+</section>
+
+<section class="card">
+<h2>🔎 Buscar gasolineras</h2>
+<div class="field"><label for="postal">Código postal (España)</label><input id="postal" type="text" inputmode="numeric" maxlength="5" placeholder="Ej. 28001" autocomplete="postal-code"></div>
+<div class="toolbar field"><div class="field"><label for="radius">Radio (km)</label><input id="radius" type="number" min="0.5" max="100" step="0.5" value="5"></div><div class="field"><label for="topn">Nº de más baratas</label><input id="topn" type="number" min="1" max="50" value="5"></div></div>
+<div class="field"><label class="muted" style="font-weight:400"><input id="allspain" type="checkbox" style="width:auto;min-height:0"> Buscar en toda España (más lento, ~12 MB)</label></div>
+<div class="field"><label for="sort">Ordenar resultados</label><select id="sort"><option value="95">Gasolina 95 más barata</option><option value="diesel">Diésel más barato</option><option value="name">Nombre</option></select></div>
+<button id="search" class="wide">Buscar gasolineras</button>
+<div id="search-status" class="status hidden" role="status" aria-live="polite"></div>
+<p class="hint">Los precios proceden del servicio público de información de carburantes del Ministerio. La disponibilidad de la consulta depende de que el servicio permita conexiones desde tu navegador.</p>
+</section>
+</div>
+
+<section class="card">
+<div class="section-head"><h2>Resultados de la búsqueda</h2><span id="result-count" class="muted"></span></div>
+<div id="results" class="results"><div class="empty">Introduce un código postal para empezar.</div></div>
+</section>
+
+<section id="trend-card" class="card hidden"><div class="section-head"><h2 id="trend-title">📈 Tendencia</h2><button class="secondary small" onclick="document.getElementById('trend-card').classList.add('hidden')">Cerrar</button></div><div id="trend-box"></div></section>
+
+<section class="card">
+<div class="section-head"><h2>⭐ Mis gasolineras favoritas</h2><button id="clear-favs" class="secondary small">Vaciar favoritas</button></div>
+<p class="hint">Las opciones más baratas de tus favoritas se resaltan en verde. Los precios guardados son los de la última búsqueda y pueden cambiar.</p>
+<div id="fav-results" class="results"><div class="empty">Todavía no has guardado gasolineras favoritas.</div></div>
+</section>
+
+<footer>
+<p>Precios informativos; confirma el precio en la estación antes de repostar. Esta página no está afiliada al Ministerio.</p>
+<p>Los datos del vehículo y favoritos se almacenan localmente en tu dispositivo.</p>
+</footer>
+</main>
+<script>
+"use strict";
+const API_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/";
+const $ = id => document.getElementById(id);
+let stations = [];
+let center = null;
+let favorites = loadJSON("fuel_favorites", []);
+
+function loadJSON(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }
+  catch { return fallback; }
+}
+function saveVehicle() {
+  localStorage.setItem("fuel_vehicle", JSON.stringify({
+    tank: $("tank").value, consumption: $("consumption").value, fuel: $("fuel").value
+  }));
+  updateCalculator(); if (stations.length) renderSearch(); renderFavorites();
+}
+function numberPrice(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const n = Number(String(value).replace(/\./g, "").replace(",", ".").trim());
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function euro(value) {
+  return value == null ? "No disponible" : value.toLocaleString("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:3,maximumFractionDigits:3}) + "/l";
+}
+function stationPrice(st, type) {
+  return numberPrice(type === "95"
+    ? (st["Precio Gasolina 95 E5"] || st["Precio Gasolina 95 E5 Premium"])
+    : st["Precio Gasoleo A"]);
+}
+function updateCalculator() {
+  const tank = Number($("tank").value);
+  const consumption = Number($("consumption").value);
+  const selected = $("fuel").value;
+  const list = favorites.concat(stations);
+  const prices = list.map(s => stationPrice(s, selected)).filter(v => v != null);
+  const average = prices.length ? Math.min(...prices) : null;
+  $("tank-cost").textContent = average == null || !(tank > 0) ? "—" : (average*tank).toLocaleString("es-ES",{style:"currency",currency:"EUR"});
+  $("range").textContent = tank > 0 && consumption > 0 ? Math.round(tank/consumption*100).toLocaleString("es-ES")+" km" : "—";
+  $("litres").textContent = tank > 0 ? tank.toLocaleString("es-ES")+" l" : "—";
+}
+function clean(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function stationCP(s) { return String(s["C.P."] ?? s.CP ?? "").trim().padStart(5, "0"); }
+function stationKey(s) { return String(s.IDEESS || [s["Rótulo"],s["Dirección"],stationCP(s)].join("|")); }
+function mapsUrl(s) {
+  const q = [s["Rótulo"],s["Dirección"],s["Localidad"],s["Provincia"]].filter(Boolean).join(", ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+function cardHTML(s, isFavorite, cheap95=false, cheapDiesel=false) {
+  const p95 = stationPrice(s,"95"), diesel = stationPrice(s,"diesel");
+  const selFuel = $("fuel").value, tankL = Number($("tank").value), pSel = selFuel==="95" ? p95 : diesel;
+  const fill = pSel!=null && tankL>0 ? (pSel*tankL).toLocaleString("es-ES",{style:"currency",currency:"EUR"}) : "—";
+  const name = s["Rótulo"] || "Gasolinera";
+  const address = [s["Dirección"],s["Localidad"],s["Provincia"],stationCP(s)].filter(Boolean).join(", ");
+  const id = clean(stationKey(s));
+  const favButton = isFavorite
+    ? `<button class="danger small" data-action="remove" data-id="${id}">Quitar favorita</button>`
+    : `<button class="gold small" data-action="add" data-id="${id}">☆ Añadir favorita</button>`;
+  return `<article class="station ${cheap95 || cheapDiesel ? "best" : ""}">
+    <div class="station-top"><div><div class="station-name">${clean(name)}</div><div class="station-address">${clean(address || "Dirección no disponible")}</div></div>
+    ${cheap95 || cheapDiesel ? '<span class="tag">Precio mínimo</span>' : ""}
+    </div>
+    <div class="prices">
+      <span class="price">⛽ 95 E5: <b>${clean(euro(p95))}</b>${cheap95 ? " · Más barata" : ""}</span>
+      <span class="price diesel">🛢️ Diésel A: <b>${clean(euro(diesel))}</b>${cheapDiesel ? " · Más barato" : ""}</span>
+      <span class="price" style="background:#f1f5f9">🧾 Depósito (${tankL>0?tankL.toLocaleString("es-ES")+" l ":""}${selFuel==="95"?"95 E5":"Diésel"}): <b>${clean(fill)}</b></span>
+    </div>
+    <div class="details">${s._km!=null ? s._km.toFixed(1)+" km · " : ""}${s["Horario"] ? "Horario: "+clean(s["Horario"])+" · " : ""}ID estación: ${clean(s.IDEESS || "—")}</div>
+    <div class="actions">${favButton}<button class="secondary small" data-action="trend" data-id="${id}">📈 Tendencia</button><a class="button secondary small" href="${mapsUrl(s)}" target="_blank" rel="noopener noreferrer">Cómo llegar ↗</a></div>
+  </article>`;
+}
+function sortStations(list) {
+  const key = $("sort").value;
+  return [...list].sort((a,b) => {
+    if (key === "name") return String(a["Rótulo"]||"").localeCompare(String(b["Rótulo"]||""),"es");
+    const pa = stationPrice(a,key), pb = stationPrice(b,key);
+    if (pa == null && pb == null) return 0;
+    if (pa == null) return 1;
+    if (pb == null) return -1;
+    return pa-pb;
+  });
+}
+function renderSearch() {
+  const key=$("sort").value==="name"?$("fuel").value:$("sort").value;
+  const n=Math.max(1,Number($("topn").value)||5);
+  const top=stations.filter(s=>stationPrice(s,key)!=null).sort((a,b)=>stationPrice(a,key)-stationPrice(b,key)).slice(0,n);
+  const ids=new Set(top.map(stationKey));
+  const list=sortStations(top.concat(favorites.filter(f=>!ids.has(stationKey(f)))));
+  list.forEach(s=>{const c=coords(s);s._km=center&&c?km(center,c):undefined;});
+  const mn=t=>{const v=list.map(s=>stationPrice(s,t)).filter(x=>x!=null);return v.length?Math.min(...v):null;};
+  const m95=mn("95"),md=mn("diesel");
+  $("result-count").textContent=`${list.length} estaciones (${stations.length} en el radio)`;
+  $("results").innerHTML=list.length?list.map(s=>cardHTML(s,favorites.some(f=>stationKey(f)===stationKey(s)),m95!=null&&stationPrice(s,"95")===m95,md!=null&&stationPrice(s,"diesel")===md)).join(""):'<div class="empty">No se encontraron estaciones en ese radio.</div>';
+}
+function renderFavorites() {
+  if (!favorites.length) {
+    $("fav-results").innerHTML = '<div class="empty">Todavía no has guardado gasolineras favoritas.</div>';
+    updateCalculator(); return;
+  }
+  const p95s = favorites.map(s=>stationPrice(s,"95")).filter(v=>v!=null);
+  const diesels = favorites.map(s=>stationPrice(s,"diesel")).filter(v=>v!=null);
+  const min95 = p95s.length ? Math.min(...p95s) : null;
+  const minDiesel = diesels.length ? Math.min(...diesels) : null;
+  $("fav-results").innerHTML = sortStations(favorites).map(s=>{
+    const p=stationPrice(s,"95"), d=stationPrice(s,"diesel");
+    return cardHTML(s,true,p!=null&&p===min95,d!=null&&d===minDiesel);
+  }).join("");
+  updateCalculator();
+}
+function showStatus(message, type="info") {
+  const el=$("search-status"); el.textContent=message; el.className="status"+(type==="error"?" error":type==="success"?" success":"");
+}
+const num=v=>{const n=parseFloat(String(v??"").replace(",","."));return Number.isFinite(n)?n:null;};
+function coords(s){const la=num(s["Latitud"]),lo=num(s["Longitud (WGS84)"]);return la==null||lo==null?null:{lat:la,lon:lo};}
+function km(a,b){const r=x=>x*Math.PI/180,h=Math.sin(r(b.lat-a.lat)/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(r(b.lon-a.lon)/2)**2;return 12742*Math.asin(Math.sqrt(h));}
+function recordHistory(list){
+  const h=loadJSON("fuel_history",{}),d=new Date().toISOString().slice(0,10);
+  list.forEach(s=>{const k=stationKey(s);(h[k]=h[k]||{})[d]={a:stationPrice(s,"95"),d:stationPrice(s,"diesel")};});
+  try{localStorage.setItem("fuel_history",JSON.stringify(h));}catch{}
+}
+function showTrend(id){
+  const h=loadJSON("fuel_history",{})[id]||{},days=Object.keys(h).sort();
+  const st=[...stations,...favorites].find(x=>stationKey(x)===id),box=$("trend-box");
+  $("trend-title").textContent="📈 Tendencia: "+(st?st["Rótulo"]+" · "+(st["Dirección"]||""):id);
+  if(days.length<2){box.innerHTML=`<div class="empty">Solo hay ${days.length} día(s) guardado(s) de esta estación. La gráfica se completa sola cada día que hagas una búsqueda.</div>`;}
+  else{
+    const W=640,H=220,P=40;
+    const series=[["a","#1d4ed8"],["d","#b45309"]].map(([k,c])=>({c,pts:days.map((d,i)=>[i,h[d][k]]).filter(q=>q[1]!=null)}));
+    const vals=series.flatMap(x=>x.pts.map(q=>q[1])),lo=Math.min(...vals),hi=Math.max(...vals),span=(hi-lo)||0.01;
+    const X=i=>P+i*(W-2*P)/(days.length-1),Y=v=>H-P-(v-lo)/span*(H-2*P),t=(x,y,a,txt)=>`<text x="${x}" y="${y}" font-size="11" text-anchor="${a}" fill="#64748b">${txt}</text>`;
+    box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${t(P-4,Y(hi)+4,"end",hi.toFixed(3))}${t(P-4,Y(lo)+4,"end",lo.toFixed(3))}${t(P,H-10,"start",days[0])}${t(W-P,H-10,"end",days[days.length-1])}${series.filter(x=>x.pts.length).map(x=>`<polyline fill="none" stroke="${x.c}" stroke-width="2.5" points="${x.pts.map(q=>X(q[0])+","+Y(q[1])).join(" ")}"/>`).join("")}</svg><p class="muted"><span style="color:#1d4ed8">●</span> 95 E5 · <span style="color:#b45309">●</span> Diésel A</p>`;
+  }
+  $("trend-card").classList.remove("hidden"); $("trend-card").scrollIntoView({behavior:"smooth"});
+}
+async function fetchProvincia(prov) {
+  // 1) Servidor intermediario local (servidor.js); 2) conexión directa al Ministerio.
+  const urls=[prov?API_URL+"FiltroProvincia/"+prov:API_URL];
+  let lastErr;
+  for (const url of urls) {
+    try {
+      const r=await fetch(url,{headers:{Accept:"application/json"}});
+      if (!r.ok) throw new Error("El servicio respondió con HTTP "+r.status+".");
+      return await r.json();
+    } catch(e) { lastErr=e; }
+  }
+  throw lastErr;
+}
+async function searchStations() {
+  const cp=$("postal").value.trim();
+  if (!/^\d{5}$/.test(cp)) { showStatus("Introduce un código postal válido de 5 dígitos.","error"); $("postal").focus(); return; }
+  const button=$("search"); button.disabled=true; button.textContent="Buscando…";
+  $("results").innerHTML=""; $("result-count").textContent="";
+  showStatus("Conectando con el servicio oficial de precios…");
+  try {
+    const prov=$("allspain").checked?"":cp.slice(0,2);
+    const data=await fetchProvincia(prov);
+    if (!Array.isArray(data.ListaEESSPrecio)) throw new Error("La respuesta del Ministerio no tiene el formato esperado.");
+    const all=data.ListaEESSPrecio;
+    const pts=all.filter(s=>stationCP(s)===cp).map(coords).filter(Boolean);
+    if(!pts.length) throw new Error("No hay estaciones con el código postal "+cp+" para situar el centro de la búsqueda.");
+    center={lat:pts.reduce((a,q)=>a+q.lat,0)/pts.length,lon:pts.reduce((a,q)=>a+q.lon,0)/pts.length};
+    const R=Number($("radius").value)||5;
+    stations=all.filter(s=>{const c=coords(s);return c&&km(center,c)<=R;});
+    // Actualiza los datos de favoritas que coincidan con estaciones recién consultadas.
+    const fresh=new Map(all.map(s=>[stationKey(s),s]));
+    favorites=favorites.map(f=>fresh.get(stationKey(f))||f);
+    localStorage.setItem("fuel_favorites",JSON.stringify(favorites));
+    recordHistory(stations.concat(favorites.filter(f=>fresh.has(stationKey(f)))));
+    renderSearch(); renderFavorites();
+    showStatus(stations.length ? `Consulta completada: ${stations.length} estación(es) a ${R} km del ${cp}.` : `El servicio respondió, pero no hay estaciones en ese radio.`, stations.length ? "success" : "info");
+  } catch(err) {
+    console.error(err);
+    const cors=/Failed to fetch|NetworkError|Load failed/i.test(err.message);
+    showStatus(cors
+      ? "No se pudo conectar con el servicio. Si estás en la vista previa del chat, ahí se bloquean las conexiones externas: descarga el archivo y ábrelo directamente en tu navegador (doble clic). Si aun así falla, puede ser un problema temporal del servicio del Ministerio."
+      : `No se pudieron cargar los precios: ${err.message}`, "error");
+    $("results").innerHTML='<div class="empty">No ha sido posible obtener los datos. Inténtalo de nuevo más tarde.</div>';
+  } finally { button.disabled=false; button.textContent="Buscar gasolineras"; }
+}
+function handleAction(event) {
+  const btn=event.target.closest("button[data-action]");
+  if (!btn) return;
+  const id=btn.dataset.id;
+  if (btn.dataset.action==="trend") return showTrend(id);
+  if (btn.dataset.action==="add") {
+    const s=stations.find(x=>stationKey(x)===id);
+    if (s && !favorites.some(f=>stationKey(f)===id)) {
+      favorites.push(s); localStorage.setItem("fuel_favorites",JSON.stringify(favorites));
+      renderSearch(); renderFavorites();
+    }
+  } else if (btn.dataset.action==="remove") {
+    favorites=favorites.filter(f=>stationKey(f)!==id);
+    localStorage.setItem("fuel_favorites",JSON.stringify(favorites));
+    renderSearch(); renderFavorites();
+  }
+}
+function init() {
+  const saved=loadJSON("fuel_vehicle",null);
+  if (saved) {
+    if(saved.tank) $("tank").value=saved.tank;
+    if(saved.consumption) $("consumption").value=saved.consumption;
+    if(saved.fuel) $("fuel").value=saved.fuel;
+  }
+  ["tank","consumption","fuel"].forEach(id=>$(id).addEventListener("input",saveVehicle));
+  $("search").addEventListener("click",searchStations);
+  $("sort").addEventListener("change",renderSearch);
+  $("topn").addEventListener("change",renderSearch);
+  $("results").addEventListener("click",handleAction);
+  $("fav-results").addEventListener("click",handleAction);
+  $("clear-favs").addEventListener("click",()=>{
+    if (!favorites.length || !confirm("¿Quieres eliminar todas tus gasolineras favoritas?")) return;
+    favorites=[]; localStorage.setItem("fuel_favorites","[]"); renderSearch(); renderFavorites();
+  });
+  $("postal").addEventListener("keydown",e=>{if(e.key==="Enter")searchStations();});
+  renderFavorites(); updateCalculator();
+}
+init();
+</script>
+</body>
+</html>
